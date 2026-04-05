@@ -20,15 +20,6 @@ resource "aws_security_group" "app_server_security_group" {
     cidr_blocks     = [aws_security_group.alb_sg.id]
   }
 
-  # Add this INSIDE your app_server_security_group resource
-  ingress {
-    description     = "Allow SSH from EICE"
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eice_security_group.id]
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -40,6 +31,7 @@ resource "aws_security_group" "app_server_security_group" {
     Name = "${var.project_name}-${var.environment}-app-server-sg"
   }
 }
+
 
 resource "aws_security_group" "alb_sg" {
   name        = "${var.project_name}-${var.environment}-alb-sg"
@@ -94,4 +86,15 @@ resource "aws_security_group" "eice_security_group" {
   tags = {
     Name = "${var.project_name}-${var.environment}-eice-sg"
   }
+}
+
+# This standalone resource breaks the cycle
+resource "aws_security_group_rule" "allow_eice_to_app" {
+  type                     = "ingress"
+  from_port                = 22
+  to_port                  = 22
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.app_server_security_group.id
+  source_security_group_id = aws_security_group.eice_security_group.id
+  description              = "Allow SSH from EICE"
 }
